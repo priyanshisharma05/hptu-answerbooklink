@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Application Form</title>
+
+    <!-- PDF and Screenshot Libraries -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+        }
+        .container {
+            width: 80%;
+            margin: auto;
+            padding: 20px;
+            border: 1px solid #000;
+            position: relative;
+            background-color: #fff;
+        }
+        .logo {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            width: 100px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+        table, th, td {
+            border: 1px solid black;
+            padding: 8px;
+            text-align: left;
+        }
+        .checkbox-group {
+            text-align: left;
+            display: inline-block;
+            margin-top: 10px;
+        }
+        .total {
+            font-weight: bold;
+            margin-top: 15px;
+        }
+        .buttons {
+            margin-top: 20px;
+        }
+        .buttons button {
+            margin-right: 10px;
+            padding: 10px 20px;
+            cursor: pointer;
+        }
+        .center-text {
+            text-align: center;
+        }
+        #pay_now_btn {
+            display: none;
+        }
+        #payment_options {
+            display: none;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container" id="form-container">
+        <img src="static/download.jpg" alt="HPTU Logo" class="logo">
+        <h2 class="center-text">APPLICATION FORM TO SEE/TO GET PHOTOCOPY OF ANSWER BOOK</h2>
+        <p class="center-text">HIMACHAL PRADESH TECHNICAL UNIVERSITY , VPO. Daruhi, Tehsil & HAMIRPUR-177001</p>
+        <p class="center-text">(Established under State Legislative Act-16 of 2010)</p>
+        <h3 class="center-text">STUDENT DETAILS</h3>
+
+        <form id="application-form">
+            <table>
+                <tr><td><label for="roll_no">UNIVERSITY ROLL NO.:</label></td><td><input type="text" id="roll_no" required></td></tr>
+                <tr><td><label for="applicant_name">STUDENT NAME:</label></td><td><input type="text" id="applicant_name" required></td></tr>
+                <tr><td><label for="father_name">FATHER'S NAME:</label></td><td><input type="text" id="father_name" required></td></tr>
+                <tr><td><label for="course">NAME OF COURSE:</label></td><td><input type="text" id="course" required></td></tr>
+                <tr><td><label for="branch">NAME OF BRANCH:</label></td><td><input type="text" id="branch" required></td></tr>
+                <tr><td><label for="exam_month">MONTH AND YEAR OF EXAMINATION:</label></td><td><input type="month" id="exam_month" required></td></tr>
+                <tr><td><label for="contact">CONTACT NUMBER:</label></td><td><input type="text" id="contact" required></td></tr>
+                <tr><td><label for="permanent_address">ADDRESS:</label></td><td><textarea id="permanent_address" required></textarea></td></tr>
+                <tr><td><label for="college">NAME OF THE COLLEGE:</label></td><td><input type="text" id="college" required></td></tr>
+                <tr><td><label for="exam_center">NAME OF THE EXAMINATION CENTER:</label></td><td><input type="text" id="exam_center" required></td></tr>
+            </table>
+
+            <h3>Subjects Appeared</h3>
+            <div class="checkbox-group" id="subject_list"></div>
+            <p class="total">Total Fee: ₹<span id="total_fee">0</span></p>
+
+            <h3>Important Instructions for the Students:</h3>
+            <ol>
+                <li>Submit this form from <b>17.09.2024 to 27.09.2024</b> with undertaking (Annexure-A).</li>
+                <li>Pay ₹1000 per answer book at the University fee counter.</li>
+                <li>Submit the form by hand/post. No late forms accepted after <b>27.09.2024</b>.</li>
+                <li>Attach photocopy of mark sheet.</li>
+                <li>Incorrect forms will be rejected.</li>
+            </ol>
+
+            <div class="buttons">
+                <button type="submit">Submit</button>
+                <button type="button" id="pay_now_btn">Pay Now</button>
+                <button type="button" id="status_btn">Status</button>
+                <button type="button" id="pdf_btn">PDF</button>
+            </div>
+        </form>
+
+        <div id="payment_options">
+            <button>Pay ₹1000</button>
+        </div>
+    </div>
+
+<script>
+    let currentRollNumber = "";
+
+    document.getElementById("roll_no").addEventListener("blur", function () {
+        currentRollNumber = this.value.trim();
+        if (currentRollNumber) {
+            fetch(`http://127.0.0.1:5000/get_student/${currentRollNumber}`)
+                .then(res => res.json())
+                .then(data => {
+                    document.getElementById("applicant_name").value = data.applicant_name || "";
+                    document.getElementById("father_name").value = data.father_name || "";
+                    document.getElementById("course").value = data.course || "";
+                    document.getElementById("branch").value = data.branch || "";
+                    document.getElementById("exam_month").value = data.exam_month || "";
+                    document.getElementById("contact").value = data.contact || "";
+                    document.getElementById("permanent_address").value = data.address || "";
+                    document.getElementById("college").value = data.college || "";
+                    document.getElementById("exam_center").value = data.exam_center || "";
+                });
+
+            fetch("/get_subjects", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ roll_no: currentRollNumber })
+            })
+            .then(res => res.json())
+            .then(data => {
+                let subjectList = document.getElementById("subject_list");
+                subjectList.innerHTML = "";
+                data.subjects.forEach(sub => {
+                    let label = document.createElement("label");
+                    let checkbox = document.createElement("input");
+                    checkbox.type = "checkbox";
+                    checkbox.value = sub.Subject;
+                    checkbox.onchange = calculateTotal;
+                    label.appendChild(checkbox);
+                    label.appendChild(document.createTextNode(` ${sub["Subject Code"]} - ${sub.Subject}`));
+                    subjectList.appendChild(label);
+                    subjectList.appendChild(document.createElement("br"));
+                });
+            });
+        }
+    });
+
+    function calculateTotal() {
+        let checkboxes = document.querySelectorAll('input[type="checkbox"]:checked');
+        let totalFee = checkboxes.length * 1000;
+        document.getElementById("total_fee").innerText = totalFee;
+    }
+
+    document.getElementById("application-form").addEventListener("submit", function (e) {
+        e.preventDefault();
+        if (currentRollNumber) {
+            fetch("/submit_form", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ roll_no: currentRollNumber })
+            }).then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    alert("Form submitted successfully! Please proceed to Pay Now.");
+                    document.getElementById("pay_now_btn").style.display = "inline-block";
+                }
+            });
+        }
+    });
+
+    document.getElementById("pay_now_btn").addEventListener("click", function () {
+        document.getElementById("payment_options").style.display = "block";
+    });
+
+    document.querySelectorAll("#payment_options button").forEach(btn => {
+        btn.addEventListener("click", function () {
+            let amount = parseInt(document.getElementById("total_fee").innerText);
+            if (!amount || amount <= 0) {
+                alert("Please select at least one subject to calculate total fee.");
+                return;
+            }
+    
+            const options = {
+                "key": "YOUR_RAZORPAY_KEY_ID",  // Replace with your actual Razorpay Key
+                "amount": amount * 100, // Amount in paise
+                "currency": "INR",
+                "name": "HPTU",
+                "description": "Answer Book Fee",
+                "handler": function (response) {
+                    // Record payment in backend
+                    fetch("/pay_now", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                            roll_no: currentRollNumber,
+                            payment_id: response.razorpay_payment_id
+                        })
+                    }).then(res => res.json())
+                    .then(data => {
+                        if (data.success) {
+                            alert("Payment successful and recorded!");
+                        } else {
+                            alert("Payment successful but recording failed.");
+                        }
+                    });
+                },
+                "prefill": {
+                    "name": document.getElementById("applicant_name").value,
+                    "email": "", // Optional
+                    "contact": document.getElementById("contact").value
+                },
+                "theme": {
+                    "color": "#3399cc"
+                }
+            };
+    
+            const rzp = new Razorpay(options);
+            rzp.open();
+        });
+    });
+    
+
+    document.getElementById("status_btn").addEventListener("click", function () {
+        if (currentRollNumber) {
+            fetch(`/status/${currentRollNumber}`)
+                .then(res => res.json())
+                .then(data => {
+                    if (data.error) {
+                        alert(data.error);
+                    } else {
+                        alert(`Form Submitted: ${data.form_submitted}\nPayment Done: ${data.payment_done}`);
+                    }
+                });
+        } else {
+            alert("Please enter your Roll Number first.");
+        }
+    });
+
+    // ✅ PDF Generation and Print
+    document.getElementById("pdf_btn").addEventListener("click", function () {
+        const container = document.querySelector(".container");
+
+        html2canvas(container).then(canvas => {
+            const imgData = canvas.toDataURL("image/png");
+            const pdf = new jspdf.jsPDF('p', 'mm', 'a4');
+
+            const pageWidth = pdf.internal.pageSize.getWidth();
+            const imgWidth = pageWidth - 20;
+            const imgHeight = (canvas.height * imgWidth) / canvas.width;
+
+            let position = 10;
+
+            if (imgHeight > pdf.internal.pageSize.getHeight()) {
+                pdf.addImage(imgData, 'PNG', 10, position, imgWidth, imgHeight);
+                let heightLeft = imgHeight - pdf.internal.pageSize.getHeight();
+
+                while (heightLeft > 0) {
+                    pdf.addPage();
+                    pdf.addImage(imgData, 'PNG', 10, -heightLeft, imgWidth, imgHeight);
+                    heightLeft -= pdf.internal.pageSize.getHeight();
+                }
+            } else {
+                pdf.addImage(imgData, 'PNG', 10, position, imgWidth, imgHeight);
+            }
+
+            pdf.save("Application_Form.pdf");
+            window.print();
+        });
+    });
+</script>
+
+</body>
+</html>
